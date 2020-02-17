@@ -34,6 +34,17 @@ Without this tool you have to manually keep your `environment.yml` up to date wi
 ## Example
 
 ```bash
+$ beni -h
+usage: beni [-h] pyproject.toml or flit.ini [pyproject.toml or flit.ini ...]
+
+Generate a environment.yml.
+
+positional arguments:
+  pyproject.toml or flit.ini
+                        a flit config file
+
+optional arguments:
+  -h, --help            show this help message and exit
 $ cat pyproject.toml
 [tool.flit.metadata]
 requires = [
