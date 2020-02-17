@@ -1,0 +1,17 @@
+channels:
+- conda-forge
+dependencies:
+- pip:
+  - flit
+- pyyaml
+- pip
+- ipython
+- toml
+- packaging
+- python>=3.8
+- mypy
+- black
+- typeguard
+- tqdm
+name: beni
+
