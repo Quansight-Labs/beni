@@ -1,6 +1,6 @@
 # `beni`
 
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) ![.github/workflows/pythonpackage.yml](https://github.com/Quansight-Labs/beni/workflows/.github/workflows/pythonpackage.yml/badge.svg)
 
 > [Eunectes beniensis](https://en.wikipedia.org/wiki/Eunectes_beniensis) is a non-venomous boa species known only from the northeastern parts of Bolivia.
 > The four-metre long Eunectes beniensis was initially believed to be the result of **hybridization** between green and yellow anacondas, but was later determined to be a distinct species. The taxonomic status is not clear, due to lack of information and the appearance similarity to Eunectes notaeus. It is closely related to Eunectes notaeus and Eunectes deschauenseei.
