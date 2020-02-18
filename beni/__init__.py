@@ -16,7 +16,7 @@ import tqdm
 import typeguard
 import yaml
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 parser = argparse.ArgumentParser(description="Generate a environment.yml.")
 parser.add_argument(
