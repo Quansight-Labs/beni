@@ -18,13 +18,16 @@ import yaml
 
 __version__ = "0.2.0"
 
-parser = argparse.ArgumentParser(description="Generate a environment.yml.")
+parser = argparse.ArgumentParser(description="Generate an environment.yml.")
 parser.add_argument(
-    "paths",
-    metavar="pyproject.toml or flit.ini",
+    "paths", metavar="pyproject.toml", type=str, nargs="+", help="flit config files",
+)
+parser.add_argument(
+    "--ignore",
+    metavar=("foo", "bar"),
     type=str,
-    nargs="+",
-    help="a flit config file",
+    nargs="*",
+    help="Conda packages to ignore",
 )
 
 
@@ -79,24 +82,25 @@ def generate_environment(
 def main() -> None:
     args = parser.parse_args()
     python_version: typing.Optional[str] = None
-    requires: typing.List[str] = []
-    own_modules: typing.List[str] = []
+    requires: typing.List[packaging.requirements.Requirement] = []
+    first_module = None
+    ignored_modules: typing.List[str] = args.ignore or []
     for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
         c = flit_core.inifile.read_flit_config(path)
-        own_modules.append(c.module)
+        if not first_module:
+            first_module = c.module
+        ignored_modules.append(c.module)
         metadata = c.metadata
         if "requires_python" in metadata:
             python_version = metadata["requires_python"]
         if "requires_dist" in metadata:
-            requires.extend(metadata["requires_dist"])
+            requires.extend(
+                map(packaging.requirements.Requirement, metadata["requires_dist"])
+            )
 
     env = generate_environment(
-        own_modules[0],
+        first_module,
         python_version,
-        [
-            packaging.requirements.Requirement(r)
-            for r in requires
-            if r not in own_modules
-        ],
+        [r for r in requires if r.name not in ignored_modules],
     )
     print(yaml.dump(env))

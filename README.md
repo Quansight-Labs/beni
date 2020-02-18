@@ -38,16 +38,19 @@ Without this tool you have to manually keep your `environment.yml` up to date wi
 
 ```bash
 $ beni -h
-usage: beni [-h] pyproject.toml or flit.ini [pyproject.toml or flit.ini ...]
+usage: beni [-h] [--ignore [foo [bar ...]]]
+            pyproject.toml [pyproject.toml ...]
 
-Generate a environment.yml.
+Generate an environment.yml.
 
 positional arguments:
-  pyproject.toml or flit.ini
-                        a flit config file
+  pyproject.toml        flit config files
 
 optional arguments:
   -h, --help            show this help message and exit
+  --ignore [foo [bar ...]]
+                        Conda packages to ignore
+
 $ cat pyproject.toml
 [tool.flit.metadata]
 requires = [
@@ -82,6 +85,7 @@ dev = [
     "nbconvert",
     "pudb"
 ]
+
 $ beni pyproject.toml
 name: metadsl
 channels:
