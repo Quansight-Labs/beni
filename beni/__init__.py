@@ -9,10 +9,11 @@ from __future__ import annotations
 import argparse
 import http.client
 import typing
-import tqdm
+
 import flit_core.inifile
-import typeguard
 import packaging.requirements
+import tqdm
+import typeguard
 import yaml
 
 __version__ = "0.1.0"

@@ -9,11 +9,11 @@ author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/quansight-labs/beni"
 classifiers = ["License :: OSI Approved :: MIT License"]
 requires = [
-    "toml",
     "pyyaml",
     "typeguard",
     "packaging",
-    "tqdm"
+    "tqdm",
+    "flit-core"
 ]
 requires-python = ">=3.8"
 
