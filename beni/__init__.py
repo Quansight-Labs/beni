@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import http.client
+import sys
 import typing
 
 import flit_core.inifile
@@ -79,8 +80,10 @@ def generate_environment(
     }
 
 
-def main() -> None:
-    args = parser.parse_args()
+def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
+    if argv is None:
+        argv = sys.argv[1:]
+    args = parser.parse_args(argv)
     python_version: typing.Optional[str] = None
     requires: typing.List[packaging.requirements.Requirement] = []
     first_module = None

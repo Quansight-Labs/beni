@@ -6,12 +6,12 @@ dependencies:
 - pyyaml
 - pip
 - ipython
-- toml
+- flit-core
 - packaging
 - python>=3.8
 - mypy
 - black
+- pytest
 - typeguard
 - tqdm
 name: beni
-
