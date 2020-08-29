@@ -10,6 +10,7 @@ import argparse
 import http.client
 import sys
 import typing
+from enum import Enum, auto
 
 import flit_core.inifile
 import packaging.requirements
@@ -17,11 +18,40 @@ import tqdm
 import typeguard
 import yaml
 
+
 __version__ = "0.3.0"
+
+
+class Deps(Enum):
+    all = auto()
+    production = auto()
+    develop = auto()
+    none = auto()
+
+    def __str__(self):
+        return self.name
+
 
 parser = argparse.ArgumentParser(description="Generate an environment.yml.")
 parser.add_argument(
     "paths", metavar="pyproject.toml", type=str, nargs="+", help="flit config files",
+)
+parser.add_argument(
+    "--deps",
+    default=Deps.all,
+    type=Deps.__getitem__,
+    choices=Deps,
+    help="Which dependencies to install. 'all' and 'develop' install the extras 'test', 'doc', and 'dev'",
+)
+
+extras_action = parser.add_argument(
+    "--extras",
+    default=(),
+    type=lambda l: l.split(',') if l else (),
+    help=(
+        "Install the dependencies of these (comma separated) extras additionally to the ones implied by --deps. "
+        "--extras=all can be useful in combination with --deps=production, --deps=none precludes using --extras"
+    ),
 )
 parser.add_argument(
     "--ignore",
@@ -80,10 +110,32 @@ def generate_environment(
     }
 
 
+def extras_to_install(c: flit_core.inifile.LoadedConfig, deps: Deps, extras: typing.Sequence[str]) -> typing.Set[str]:
+    to_install = set(extras)
+    if deps is Deps.all or 'all' in to_install:
+        to_install |= set(c.reqs_by_extra.keys())
+    elif deps is Deps.develop:
+        to_install |= {'dev', 'doc', 'test'}
+    return to_install
+
+
+def is_in_extras(req: packaging.requirements.Requirement, extras: typing.Set[str]):
+    if not req.marker:
+        return True
+    for extra in extras:
+        if req.marker.evaluate(dict(extra=extra)):
+            return True
+    return False
+
+
 def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     if argv is None:
         argv = sys.argv[1:]
     args = parser.parse_args(argv)
+    if args.deps is Deps.none and args.extras:
+        raise argparse.ArgumentError(extras_action, "Can’t specify extras together with --deps=none")
+    if args.deps is Deps.all and args.extras:
+        args.deps = Deps.production  # the default is all so override if extras are specified
     python_version: typing.Optional[str] = None
     requires: typing.List[packaging.requirements.Requirement] = []
     first_module = None
@@ -94,12 +146,13 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
             first_module = c.module
         ignored_modules.append(c.module)
         metadata = c.metadata
+        extras = extras_to_install(c, args.deps, args.extras)
         if "requires_python" in metadata:
             python_version = metadata["requires_python"]
         if "requires_dist" in metadata:
-            requires.extend(
-                map(packaging.requirements.Requirement, metadata["requires_dist"])
-            )
+            reqs = map(packaging.requirements.Requirement, metadata["requires_dist"])
+            reqs_filtered = filter(lambda req: is_in_extras(req, extras), reqs)
+            requires.extend(reqs_filtered)
 
     env = generate_environment(
         first_module,
