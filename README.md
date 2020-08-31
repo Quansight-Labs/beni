@@ -1,6 +1,9 @@
 # `beni`
 
+
+
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) ![.github/workflows/pythonpackage.yml](https://github.com/Quansight-Labs/beni/workflows/.github/workflows/pythonpackage.yml/badge.svg) [![PyPi Package](https://img.shields.io/pypi/v/beni)](https://pypi.org/project/beni/)
+
 
 > *Common names: Bolivian anaconda, **Beni** anaconda*
 >
@@ -8,7 +11,7 @@
 >
 > The four-metre long Eunectes beniensis was initially believed to be the result of hybridization between green and yellow anacondas, but was later determined to be a distinct species. The taxonomic status is not clear, due to lack of information and the appearance similarity to Eunectes notaeus. It is closely related to Eunectes notaeus and Eunectes deschauenseei.
 
-It's a light anaconda! So a mashup of [`flit`](https://github.com/takluyver/flit) and [`conda`](https://docs.conda.io/en/latest/).
+*`beni` is [`flit`](https://github.com/takluyver/flit) + [`conda`](https://docs.conda.io/en/latest/)*
 
 ## What?
 
@@ -19,7 +22,7 @@ This is a specific tool to fascilitate one workflow of using flit and conda toge
 3. You want to use Conda to manage local development but you wanna release your package on PyPi.
 4. You want to generate an `environment.yml` for local development that will install as many of your Pypi dependencies through Conda as possible.
 
-Without this tool you have to manually keep your `environment.yml` up to date with all your `pyproject.toml` files, which is error prone and annoying!
+Without this tool you have to manually keep your `environment.yml` up to date with all your `pyproject.toml` files, which is error prone and time consuming.
 
 ## Unsolved issues
 
@@ -30,7 +33,7 @@ Without this tool you have to manually keep your `environment.yml` up to date wi
 ## Usage
 
 1. `pip install beni`
-2. Run `beni <path to pyproject.toml> [<another path to pyproject.tmo>] > binder/environment.yml` to generate an environment file. It adds all your requirements that are conda forge packages to this environment and names it after the first `pyproject.toml` module.
+2. Run `beni <path to pyproject.toml> [<another path to pyproject.toml>] > binder/environment.yml` to generate an environment file. It adds all your requirements that are conda forge packages to this environment and names it after the first `pyproject.toml` module.
    each of your requirements to see if there is an equivalent conda forge package
 3. Add `conda env create -f bind/environment.yml && conda activate <module name> && flit install --symlink` to your README as the dev setup.
 
