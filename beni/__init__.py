@@ -26,7 +26,7 @@ class Deps(Enum):
     all = auto()
     production = auto()
     develop = auto()
-    none = auto()
+    extras = auto()
 
     def __str__(self):
         return self.name
@@ -38,10 +38,13 @@ parser.add_argument(
 )
 parser.add_argument(
     "--deps",
-    default=Deps.all,
+    default=Deps.extras,
     type=Deps.__getitem__,
     choices=Deps,
-    help="Which dependencies to install. 'all' and 'develop' install the extras 'test', 'doc', and 'dev'",
+    help=(
+        "Which dependencies to emit. 'develop' means the extras 'test', 'doc', and 'dev', 'all' means all extras, "
+        "and 'extras' means the ones specified in `--extras` or all extras if `--extras` is not specified."
+    ),
 )
 
 extras_action = parser.add_argument(
@@ -112,7 +115,11 @@ def generate_environment(
 
 def extras_to_install(c: flit_core.inifile.LoadedConfig, deps: Deps, extras: typing.Sequence[str]) -> typing.Set[str]:
     to_install = set(extras)
-    if deps is Deps.all or 'all' in to_install:
+    if any((
+        deps is Deps.all,
+        deps is Deps.extras and not to_install,
+        'all' in to_install,
+    )):
         to_install |= set(c.reqs_by_extra.keys())
     elif deps is Deps.develop:
         to_install |= {'dev', 'doc', 'test'}
@@ -132,10 +139,6 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     if argv is None:
         argv = sys.argv[1:]
     args = parser.parse_args(argv)
-    if args.deps is Deps.none and args.extras:
-        raise argparse.ArgumentError(extras_action, "Can’t specify extras together with --deps=none")
-    if args.deps is Deps.all and args.extras:
-        args.deps = Deps.production  # the default is all so override if extras are specified
     python_version: typing.Optional[str] = None
     requires: typing.List[packaging.requirements.Requirement] = []
     first_module = None
