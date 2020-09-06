@@ -12,11 +12,15 @@ import sys
 import typing
 from enum import Enum, auto
 
-import flit_core.inifile
 import packaging.requirements
 import tqdm
 import typeguard
 import yaml
+try:
+    from flit_core.config import read_flit_config
+except ImportError:
+    from flit_core.inifile import read_flit_config
+
 
 
 __version__ = "0.3.0"
@@ -144,7 +148,7 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     first_module = None
     ignored_modules: typing.List[str] = args.ignore or []
     for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
-        c = flit_core.inifile.read_flit_config(path)
+        c = read_flit_config(path)
         if not first_module:
             first_module = c.module
         ignored_modules.append(c.module)
