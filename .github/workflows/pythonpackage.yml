@@ -16,6 +16,6 @@ jobs:
     - name: Lint with mypy
       run: |
         mypy beni
-    - name: Test on self
+    - name: Test using pytest
       run: |
-        beni pyproject.toml
+        pytest

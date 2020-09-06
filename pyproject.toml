@@ -23,5 +23,8 @@ dev = [
     "ipython",
     "mypy"
 ]
+test = [
+    "pytest"
+]
 [tool.flit.scripts]
 beni = "beni:main"
