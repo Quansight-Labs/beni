@@ -16,9 +16,9 @@ import tqdm
 import typeguard
 import yaml
 try:
-    from flit_core.config import read_flit_config
+    import flit_core.config as flit_config
 except ImportError:
-    from flit_core.inifile import read_flit_config
+    import flit_core.inifile as flit_config
 
 
 
@@ -117,7 +117,7 @@ def generate_environment(
     }
 
 
-def extras_to_install(c: flit_core.inifile.LoadedConfig, deps: Deps, extras: typing.Sequence[str]) -> typing.Set[str]:
+def extras_to_install(c: flit_config.LoadedConfig, deps: Deps, extras: typing.Sequence[str]) -> typing.Set[str]:
     to_install = set(extras)
     if any((
         deps is Deps.all,
@@ -146,7 +146,7 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     first_module = None
     ignored_modules: typing.List[str] = args.ignore or []
     for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
-        c = read_flit_config(path)
+        c = flit_config.read_flit_config(path)
         if not first_module:
             first_module = c.module
         ignored_modules.append(c.module)
