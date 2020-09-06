@@ -58,7 +58,7 @@ optional arguments:
                         extras if `--extras` is not specified.
   --extras extra1,...   Install the dependencies of these (comma separated) extras additionally to the ones
                         implied by --deps. --extras=all can be useful in combination with --deps=production.
-   --ignore [foo [bar ...]]
+  --ignore [foo [bar ...]]
                         Conda packages to ignore
 
 $ cat pyproject.toml
