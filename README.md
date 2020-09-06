@@ -41,7 +41,8 @@ Without this tool you have to manually keep your `environment.yml` up to date wi
 
 ```bash
 $ beni -h
-usage: beni [-h] [--ignore [foo [bar ...]]]
+usage: beni [-h] [--deps {all,production,develop,extras}] [--extras extra1,...]
+            [--ignore [foo [bar ...]]]
             pyproject.toml [pyproject.toml ...]
 
 Generate an environment.yml.
@@ -51,6 +52,12 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  --deps {all,production,develop,extras}
+                        Which dependencies to emit. 'develop' means the extras 'test', 'doc', and 'dev',
+                        'all' means all extras, and 'extras' means the ones specified in `--extras` or all
+                        extras if `--extras` is not specified.
+  --extras extra1,...   Install the dependencies of these (comma separated) extras additionally to the ones
+                        implied by --deps. --extras=all can be useful in combination with --deps=production.
   --ignore [foo [bar ...]]
                         Conda packages to ignore
 

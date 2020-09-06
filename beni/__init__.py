@@ -8,15 +8,21 @@ from __future__ import annotations
 
 import argparse
 import http.client
-import sys
 import typing
 from enum import Enum, auto
+from pathlib import Path
 
-import flit_core.inifile
 import packaging.requirements
 import tqdm
 import typeguard
 import yaml
+try:
+    import flit_core.config as flit_config
+    flit2 = False
+except ImportError:
+    import flit_core.inifile as flit_config
+    flit2 = True
+
 
 
 __version__ = "0.3.0"
@@ -32,9 +38,9 @@ class Deps(Enum):
         return self.name
 
 
-parser = argparse.ArgumentParser(description="Generate an environment.yml.")
+parser = argparse.ArgumentParser(__name__, description="Generate an environment.yml.")
 parser.add_argument(
-    "paths", metavar="pyproject.toml", type=str, nargs="+", help="flit config files",
+    "paths", metavar="pyproject.toml", type=Path, nargs="+", help="flit config files",
 )
 parser.add_argument(
     "--deps",
@@ -49,11 +55,12 @@ parser.add_argument(
 
 extras_action = parser.add_argument(
     "--extras",
+    metavar="extra1,...",
     default=(),
     type=lambda l: l.split(',') if l else (),
     help=(
         "Install the dependencies of these (comma separated) extras additionally to the ones implied by --deps. "
-        "--extras=all can be useful in combination with --deps=production, --deps=none precludes using --extras"
+        "--extras=all can be useful in combination with --deps=production."
     ),
 )
 parser.add_argument(
@@ -113,7 +120,7 @@ def generate_environment(
     }
 
 
-def extras_to_install(c: flit_core.inifile.LoadedConfig, deps: Deps, extras: typing.Sequence[str]) -> typing.Set[str]:
+def extras_to_install(c: flit_config.LoadedConfig, deps: Deps, extras: typing.Sequence[str]) -> typing.Set[str]:
     to_install = set(extras)
     if any((
         deps is Deps.all,
@@ -136,15 +143,13 @@ def is_in_extras(req: packaging.requirements.Requirement, extras: typing.Set[str
 
 
 def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
-    if argv is None:
-        argv = sys.argv[1:]
     args = parser.parse_args(argv)
     python_version: typing.Optional[str] = None
     requires: typing.List[packaging.requirements.Requirement] = []
     first_module = None
     ignored_modules: typing.List[str] = args.ignore or []
     for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
-        c = flit_core.inifile.read_flit_config(path)
+        c = flit_config.read_flit_config(str(path) if flit2 else path)
         if not first_module:
             first_module = c.module
         ignored_modules.append(c.module)

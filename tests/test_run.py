@@ -9,7 +9,7 @@ from beni import main
 
 proj_dir = Path(__file__).parent.parent
 pyproj_path = proj_dir / "pyproject.toml"
-environment = yaml.load((proj_dir / "environment.yml").read_text())
+environment = yaml.safe_load((proj_dir / "environment.yml").read_text())
 
 dev_deps = ["black", "ipython", "mypy"]
 test_deps = ["pytest"]
@@ -23,7 +23,7 @@ def sort_environments(*envs):
 def test_run_basic(capsys: CaptureFixture):
     expected = deepcopy(environment)
     main([str(pyproj_path)])
-    actual = yaml.load(capsys.readouterr().out)
+    actual = yaml.safe_load(capsys.readouterr().out)
     sort_environments(expected, actual)
     assert expected == actual
 
@@ -33,7 +33,7 @@ def test_run_prod_deps(capsys: CaptureFixture):
     for dep in dev_deps + test_deps:
         expected['dependencies'].remove(dep)
     main([str(pyproj_path), '--deps=production'])
-    actual = yaml.load(capsys.readouterr().out)
+    actual = yaml.safe_load(capsys.readouterr().out)
     sort_environments(expected, actual)
     assert expected == actual
 
@@ -43,6 +43,6 @@ def test_run_dev_extra(capsys: CaptureFixture):
     for dep in test_deps:
         expected['dependencies'].remove(dep)
     main([str(pyproj_path), '--extras=dev'])
-    actual = yaml.load(capsys.readouterr().out)
+    actual = yaml.safe_load(capsys.readouterr().out)
     sort_environments(expected, actual)
     assert expected == actual
