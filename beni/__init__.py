@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import http.client
-import sys
 import typing
 from enum import Enum, auto
 
@@ -36,7 +35,7 @@ class Deps(Enum):
         return self.name
 
 
-parser = argparse.ArgumentParser(description="Generate an environment.yml.")
+parser = argparse.ArgumentParser(__name__, description="Generate an environment.yml.")
 parser.add_argument(
     "paths", metavar="pyproject.toml", type=str, nargs="+", help="flit config files",
 )
@@ -53,11 +52,12 @@ parser.add_argument(
 
 extras_action = parser.add_argument(
     "--extras",
+    metavar="extra1,...",
     default=(),
     type=lambda l: l.split(',') if l else (),
     help=(
         "Install the dependencies of these (comma separated) extras additionally to the ones implied by --deps. "
-        "--extras=all can be useful in combination with --deps=production, --deps=none precludes using --extras"
+        "--extras=all can be useful in combination with --deps=production."
     ),
 )
 parser.add_argument(
@@ -140,8 +140,6 @@ def is_in_extras(req: packaging.requirements.Requirement, extras: typing.Set[str
 
 
 def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
-    if argv is None:
-        argv = sys.argv[1:]
     args = parser.parse_args(argv)
     python_version: typing.Optional[str] = None
     requires: typing.List[packaging.requirements.Requirement] = []
