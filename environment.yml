@@ -6,7 +6,7 @@ dependencies:
 - pyyaml
 - pip
 - ipython
-- flit-core
+- flit-core<4,>=2
 - packaging
 - python>=3.8
 - mypy

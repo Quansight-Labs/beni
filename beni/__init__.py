@@ -10,6 +10,7 @@ import argparse
 import http.client
 import typing
 from enum import Enum, auto
+from pathlib import Path
 
 import packaging.requirements
 import tqdm
@@ -17,8 +18,10 @@ import typeguard
 import yaml
 try:
     import flit_core.config as flit_config
+    flit2 = False
 except ImportError:
     import flit_core.inifile as flit_config
+    flit2 = True
 
 
 
@@ -37,7 +40,7 @@ class Deps(Enum):
 
 parser = argparse.ArgumentParser(__name__, description="Generate an environment.yml.")
 parser.add_argument(
-    "paths", metavar="pyproject.toml", type=str, nargs="+", help="flit config files",
+    "paths", metavar="pyproject.toml", type=Path, nargs="+", help="flit config files",
 )
 parser.add_argument(
     "--deps",
@@ -146,7 +149,7 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     first_module = None
     ignored_modules: typing.List[str] = args.ignore or []
     for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
-        c = flit_config.read_flit_config(path)
+        c = flit_config.read_flit_config(str(path) if flit2 else path)
         if not first_module:
             first_module = c.module
         ignored_modules.append(c.module)
