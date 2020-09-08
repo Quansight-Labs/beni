@@ -1,4 +1,10 @@
-.vscode
-.mypy_cache
-**/__pycache__
-dist/
+# IDEs
+/.vscode/
+/.idea/
+
+# Caches
+.mypy_cache/
+__pycache__/
+
+# Artifacts
+/dist/
