@@ -9,13 +9,14 @@ from __future__ import annotations
 import argparse
 import http.client
 import typing
+from copy import deepcopy
 from enum import Enum, auto
 from pathlib import Path
 
-import packaging.requirements
 import tqdm
 import typeguard
 import yaml
+from packaging.requirements import Requirement
 try:
     import flit_core.config as flit_config
     flit2 = False
@@ -24,8 +25,15 @@ except ImportError:
     flit2 = True
 
 
-
 __version__ = "0.4.1"
+
+
+class Format(Enum):
+    pip = auto()
+    conda = auto()
+
+    def __str__(self):
+        return self.name
 
 
 class Deps(Enum):
@@ -43,6 +51,14 @@ parser.add_argument(
     "paths", metavar="pyproject.toml", type=Path, nargs="+", help="flit config files",
 )
 parser.add_argument(
+    "--format",
+    "-f",
+    default=Format.conda,
+    type=Format.__getitem__,
+    choices=Format,
+    help="The format of the dependency file. “pip” means PEP 508, “conda” means environment.yml",
+)
+parser.add_argument(
     "--deps",
     default=Deps.extras,
     type=Deps.__getitem__,
@@ -52,7 +68,6 @@ parser.add_argument(
         "and 'extras' means the ones specified in `--extras` or all extras if `--extras` is not specified."
     ),
 )
-
 extras_action = parser.add_argument(
     "--extras",
     metavar="extra1,...",
@@ -99,7 +114,7 @@ class Environment(typing.TypedDict):
 def generate_environment(
     name: str,
     python_version: typing.Optional[str],
-    requirements: typing.List[packaging.requirements.Requirement],
+    requirements: typing.List[Requirement],
 ) -> Environment:
     dependencies = {"pip"}
 
@@ -133,7 +148,7 @@ def extras_to_install(c: flit_config.LoadedConfig, deps: Deps, extras: typing.Se
     return to_install
 
 
-def is_in_extras(req: packaging.requirements.Requirement, extras: typing.Set[str]):
+def is_in_extras(req: Requirement, extras: typing.Set[str]):
     if not req.marker:
         return True
     for extra in extras:
@@ -142,10 +157,31 @@ def is_in_extras(req: packaging.requirements.Requirement, extras: typing.Set[str
     return False
 
 
+def clear_extras(reqs: typing.Iterable[Requirement]):
+    reqs_no_extra = [deepcopy(r) for r in reqs]
+    for r in reqs_no_extra:
+        if r.marker is None:
+            continue
+        markers = getattr(r.marker, "_markers", [])
+        if len(markers) < 3 or not isinstance(markers[0], tuple) or not hasattr(markers[0][0], "value"):
+            # Either empty or they changed the code
+            r.marker = None
+        elif len(markers) == 1 and markers[0][0].value == "extra":
+            # Just an extra
+            r.marker = None
+        elif markers[0][0].value == "extra" and markers[1] == "and":
+            # Extra at the start
+            r.marker._markers[:2] = []
+        elif markers[-2] == "and" and markers[-1][0].value == "extra":
+            # Extra at the end
+            r.marker._markers[-2:] = []
+    return reqs_no_extra
+
+
 def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     args = parser.parse_args(argv)
     python_version: typing.Optional[str] = None
-    requires: typing.List[packaging.requirements.Requirement] = []
+    requires: typing.List[Requirement] = []
     first_module = None
     ignored_modules: typing.List[str] = args.ignore or []
     for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
@@ -158,13 +194,16 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
         if "requires_python" in metadata:
             python_version = metadata["requires_python"]
         if "requires_dist" in metadata:
-            reqs = map(packaging.requirements.Requirement, metadata["requires_dist"])
+            reqs = map(Requirement, metadata["requires_dist"])
             reqs_filtered = filter(lambda req: is_in_extras(req, extras), reqs)
             requires.extend(reqs_filtered)
 
-    env = generate_environment(
-        first_module,
-        python_version,
-        [r for r in requires if r.name not in ignored_modules],
-    )
-    print(yaml.dump(env))
+    reqs_final = [r for r in requires if r.name not in ignored_modules]
+    if args.format is Format.conda:
+        env = generate_environment(first_module, python_version, reqs_final)
+        spec = yaml.dump(env)
+    elif args.format is Format.pip:
+        spec = '\n'.join(map(str, clear_extras(reqs_final)))
+    else:
+        assert False
+    print(spec)
