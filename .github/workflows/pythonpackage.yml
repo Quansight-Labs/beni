@@ -20,4 +20,4 @@ jobs:
         mypy beni
     - name: Test using pytest
       run: |
-        pytest
+        pytest -v --color=yes

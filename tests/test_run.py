@@ -11,7 +11,7 @@ proj_dir = Path(__file__).parent.parent
 pyproj_path = proj_dir / "pyproject.toml"
 environment = yaml.safe_load((proj_dir / "environment.yml").read_text())
 
-dev_deps = ["black", "ipython", "mypy"]
+dev_deps = ["black", "ipython", "mypy", "types-PyYAML"]
 test_deps = ["pytest"]
 
 
