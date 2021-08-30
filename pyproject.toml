@@ -22,7 +22,8 @@ requires-python = ">=3.8"
 dev = [
     "black",
     "ipython",
-    "mypy"
+    "mypy",
+    "types-PyYAML",
 ]
 test = [
     "pytest"
