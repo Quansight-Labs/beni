@@ -1,3 +1,5 @@
+name: Tests and static checks
+
 on: [push]
 
 jobs:
