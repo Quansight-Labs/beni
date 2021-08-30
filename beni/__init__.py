@@ -182,7 +182,7 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     args = parser.parse_args(argv)
     python_version: typing.Optional[str] = None
     requires: typing.List[Requirement] = []
-    first_module = None
+    first_module: typing.Optional[str] = None
     ignored_modules: typing.List[str] = args.ignore or []
     for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
         c = flit_config.read_flit_config(str(path) if flit2 else path)
@@ -197,6 +197,7 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
             reqs = map(Requirement, metadata["requires_dist"])
             reqs_filtered = filter(lambda req: is_in_extras(req, extras), reqs)
             requires.extend(reqs_filtered)
+    assert first_module is not None
 
     reqs_final = [r for r in requires if r.name not in ignored_modules]
     if args.format is Format.conda:
