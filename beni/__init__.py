@@ -64,7 +64,8 @@ parser.add_argument(
     type=Deps.__getitem__,
     choices=Deps,
     help=(
-        "Which dependencies to emit. 'develop' means the extras 'test', 'doc', and 'dev', 'all' means all extras, "
+        "Which dependencies to emit. 'production' means no extras, "
+        "'develop' means the extras 'test', 'doc', and 'dev', 'all' means all extras, "
         "and 'extras' means the ones specified in `--extras` or all extras if `--extras` is not specified."
     ),
 )
