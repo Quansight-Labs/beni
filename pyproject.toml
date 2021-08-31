@@ -14,7 +14,8 @@ requires = [
     "typeguard",
     "packaging",
     "tqdm",
-    "flit-core >=2,<4"
+    "flit-core >=2,<4",
+    "platformdirs",
 ]
 requires-python = ">=3.8"
 

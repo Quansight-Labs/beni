@@ -9,12 +9,15 @@ from __future__ import annotations
 import argparse
 import http.client
 import typing
-from contextlib import closing, contextmanager
+from contextlib import closing
 from copy import deepcopy
+from datetime import timedelta, datetime, timezone
 from enum import Enum, auto
 from pathlib import Path
+from shutil import copyfileobj
 from urllib.parse import urlparse
 
+import platformdirs
 import tqdm
 import typeguard
 import yaml
@@ -29,6 +32,7 @@ except ImportError:
 
 __version__ = "0.4.2"
 
+CACHE_DIR = Path(platformdirs.user_cache_dir('beni'))
 BASE_URL = "https://raw.githubusercontent.com/regro"
 CF_GRAPH_URL = f"{BASE_URL}/cf-graph-countyfair/blob/master/graph.json"
 CF_MAPPING_URL = f"{BASE_URL}/cf-graph-countyfair/master/mappings/pypi/name_mapping.yaml"
@@ -102,19 +106,31 @@ parser.add_argument(
 )
 
 
-@contextmanager
-def urlopen(method: str, url: str) -> typing.ContextManager[http.client.HTTPResponse]:
+def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
+    method = 'GET'
     parts = urlparse(url)
-    assert parts.scheme == "https"
+    assert parts.scheme in {"https", "http"}
     assert not parts.query
-    conn = http.client.HTTPSConnection(parts.hostname, parts.port)
+    # Have to use http.client instead of urllib b/c no way to disable redirects
+    # on urrlib and it's wasteful to follow (AFAIK)
+    con_cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
+    conn = con_cls(parts.hostname, parts.port)
     conn.request(method, parts.path, headers={"User-Agent": "beni"})
     r = conn.getresponse()
-    with closing(r):
+    cache_path = CACHE_DIR / parts.netloc / parts.path.lstrip('/')
+    if cache_path.is_file():
+        last_modified = datetime.fromtimestamp(cache_path.stat().st_mtime, timezone.utc)
+        now = datetime.now(timezone.utc)
+        if (now - last_modified) < max_age:
+            return cache_path
+    else:
+        cache_path.parent.mkdir(exist_ok=True, parents=True)
+    with closing(r), cache_path.open('wb') as f:
         if r.status != 200:
             content = r.read().decode("utf-8", errors="surrogateescape")
             raise http.client.HTTPException(f"Error {method}ing {url}, received {r.reason}: {content}")
-        yield r
+        copyfileobj(r, f)
+    return cache_path
 
 
 class CondaForgeMapper:
@@ -122,10 +138,7 @@ class CondaForgeMapper:
     _pypi2cf: typing.Dict[str, str]
 
     def __init__(self):
-        # Have to use http.client instead of urllib b/c no way to disable redirects
-        # on urrlib and it's wasteful to follow (AFAIK)
-        with urlopen('GET', CF_MAPPING_URL) as r:
-            self.data = typing.cast(typing.List[CFMapping], yaml.safe_load(r))
+        self.data = typing.cast(typing.List[CFMapping], yaml.safe_load(get_cached(CF_MAPPING_URL).read_bytes()))
         self._pypi2cf = {self._normalize(m["pypi_name"]): m["conda_name"] for m in self.data}
 
     @staticmethod
