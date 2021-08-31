@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import http.client
 import typing
+from contextlib import closing, contextmanager
 from copy import deepcopy
 from enum import Enum, auto
 from pathlib import Path
@@ -28,7 +29,10 @@ except ImportError:
 
 __version__ = "0.4.2"
 
-CF_MAPPING_URL = "https://raw.githubusercontent.com/regro/cf-graph-countyfair/master/mappings/pypi/name_mapping.yaml"
+BASE_URL = "https://raw.githubusercontent.com/regro"
+CF_GRAPH_URL = f"{BASE_URL}/cf-graph-countyfair/blob/master/graph.json"
+CF_MAPPING_URL = f"{BASE_URL}/cf-graph-countyfair/master/mappings/pypi/name_mapping.yaml"
+CF_MAP_STATIC_URL = f"{BASE_URL}/cf-scripts/master/conda_forge_tick/pypi_name_mapping_static.yaml"
 
 
 class Format(Enum):
@@ -98,6 +102,21 @@ parser.add_argument(
 )
 
 
+@contextmanager
+def urlopen(method: str, url: str) -> typing.ContextManager[http.client.HTTPResponse]:
+    parts = urlparse(url)
+    assert parts.scheme == "https"
+    assert not parts.query
+    conn = http.client.HTTPSConnection(parts.hostname, parts.port)
+    conn.request(method, parts.path, headers={"User-Agent": "beni"})
+    r = conn.getresponse()
+    with closing(r):
+        if r.status != 200:
+            content = r.read().decode("utf-8", errors="surrogateescape")
+            raise http.client.HTTPException(f"Error {method}ing {url}, received {r.reason}: {content}")
+        yield r
+
+
 class CondaForgeMapper:
     data: typing.List[CFMapping]
     _pypi2cf: typing.Dict[str, str]
@@ -105,18 +124,8 @@ class CondaForgeMapper:
     def __init__(self):
         # Have to use http.client instead of urllib b/c no way to disable redirects
         # on urrlib and it's wasteful to follow (AFAIK)
-        url = urlparse(CF_MAPPING_URL)
-        assert url.scheme == "https"
-        assert not url.query
-        conn = http.client.HTTPSConnection(url.hostname, url.port)
-        conn.request("GET", url.path, headers={"User-Agent": "beni"})
-        r = conn.getresponse()
-        if r.status != 200:
-            content = r.read().decode("utf-8", errors="surrogateescape")
-            conn.close()
-            raise http.client.HTTPException(f"Error GETting {CF_MAPPING_URL}, received {r.reason}: {content}")
-        self.data = typing.cast(typing.List[CFMapping], yaml.safe_load(r))
-        conn.close()
+        with urlopen('GET', CF_MAPPING_URL) as r:
+            self.data = typing.cast(typing.List[CFMapping], yaml.safe_load(r))
         self._pypi2cf = {self._normalize(m["pypi_name"]): m["conda_name"] for m in self.data}
 
     @staticmethod
