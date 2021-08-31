@@ -12,6 +12,7 @@ import typing
 from copy import deepcopy
 from enum import Enum, auto
 from pathlib import Path
+from urllib.parse import urlparse
 
 import tqdm
 import typeguard
@@ -26,6 +27,8 @@ except ImportError:
 
 
 __version__ = "0.4.2"
+
+CF_MAPPING_URL = "https://raw.githubusercontent.com/regro/cf-graph-countyfair/master/mappings/pypi/name_mapping.yaml"
 
 
 class Format(Enum):
@@ -44,6 +47,13 @@ class Deps(Enum):
 
     def __str__(self):
         return self.name
+
+
+class CFMapping(typing.TypedDict):
+    conda_name: str
+    import_name: str
+    mapping_source: str
+    pypi_name: str
 
 
 parser = argparse.ArgumentParser(__name__, description="Generate an environment.yml.")
@@ -88,21 +98,33 @@ parser.add_argument(
 )
 
 
-def is_conda_forge_package(name: str) -> bool:
-    """
-    Checks if something is a conda forge package by hitting conda page.
+class CondaForgeMapper:
+    data: typing.List[CFMapping]
+    _pypi2cf: typing.Dict[str, str]
 
-    If 200 then package, if 302 then not.
-    """
-    # Have to use http.client instead of urllib b/c no way to disable redirects
-    # on urrlib and it's wasteful to follow (AFAIK)
+    def __init__(self):
+        # Have to use http.client instead of urllib b/c no way to disable redirects
+        # on urrlib and it's wasteful to follow (AFAIK)
+        url = urlparse(CF_MAPPING_URL)
+        assert url.scheme == "https"
+        assert not url.query
+        conn = http.client.HTTPSConnection(url.hostname, url.port)
+        conn.request("GET", url.path, headers={"User-Agent": "beni"})
+        r = conn.getresponse()
+        if r.status != 200:
+            content = r.read().decode("utf-8", errors="surrogateescape")
+            conn.close()
+            raise http.client.HTTPException(f"Error GETting {CF_MAPPING_URL}, received {r.reason}: {content}")
+        self.data = typing.cast(typing.List[CFMapping], yaml.safe_load(r))
+        conn.close()
+        self._pypi2cf = {self._normalize(m["pypi_name"]): m["conda_name"] for m in self.data}
 
-    # Need user agent or else got unauthorized
-    conn = http.client.HTTPSConnection("anaconda.org")
-    conn.request("GET", f"/conda-forge/{name}/", headers={"User-Agent": "beni"})
-    r = conn.getresponse()
-    conn.close()
-    return r.status == 200
+    @staticmethod
+    def _normalize(name: str) -> str:
+        return name.casefold().replace("_", "-")
+
+    def pypi2cf(self, pypi_name: str) -> typing.Optional[str]:
+        return self._pypi2cf.get(self._normalize(pypi_name))
 
 
 class Environment(typing.TypedDict):
@@ -124,10 +146,11 @@ def generate_environment(
     else:
         dependencies.add("python")
 
+    mapper = CondaForgeMapper()
     for r in tqdm.tqdm(requirements, desc="Checking packages"):
-        if not is_conda_forge_package(r.name):
+        if (cf_name := mapper.pypi2cf(r.name)) is None:
             continue
-        dependencies.add(f"{r.name}{r.specifier}")
+        dependencies.add(f"{cf_name}{r.specifier}")
 
     return {
         "name": name,
