@@ -51,11 +51,7 @@ class Deps(Enum):
 
 parser = argparse.ArgumentParser(__name__, description="Generate an environment.yml.")
 parser.add_argument(
-    "paths",
-    metavar="pyproject.toml",
-    type=Path,
-    nargs="+",
-    help="flit config files",
+    "paths", metavar="pyproject.toml", type=Path, nargs="+", help="flit config files"
 )
 parser.add_argument(
     "--format",
