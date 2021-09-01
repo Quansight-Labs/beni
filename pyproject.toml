@@ -20,13 +20,11 @@ requires-python = ">=3.8"
 
 [tool.flit.metadata.requires-extra]
 dev = [
-    "black",
+    "pre-commit",
     "ipython",
-    "mypy",
-    "types-PyYAML",
 ]
 test = [
-    "pytest"
+    "pytest",
 ]
 [tool.flit.scripts]
 beni = "beni:main"

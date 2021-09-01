@@ -135,5 +135,6 @@ dependencies:
 ```bash
 conda env create -f environment.yml
 conda activate beni
+pre-commit install
 flit install --symlink
 ```

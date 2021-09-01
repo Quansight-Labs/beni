@@ -9,9 +9,7 @@ dependencies:
 - flit-core<4,>=2
 - packaging
 - python>=3.8
-- mypy
-- types-PyYAML
-- black
+- pre-commit
 - pytest
 - typeguard
 - tqdm
