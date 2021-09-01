@@ -10,9 +10,7 @@ dependencies:
 - platformdirs
 - packaging
 - python>=3.8
-- mypy
-- types-pyyaml
-- black
+- pre-commit
 - pytest
 - typeguard
 - tqdm

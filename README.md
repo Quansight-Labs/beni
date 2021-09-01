@@ -1,8 +1,13 @@
 # `beni`
 
+[![Code style: black][img:black]][lnk:black] [![Tests and style checks][img:ci]][lnk:ci] [![PyPi Package][img:pypi]][lnk:pypi]
 
-
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) ![.github/workflows/pythonpackage.yml](https://github.com/Quansight-Labs/beni/workflows/.github/workflows/pythonpackage.yml/badge.svg) [![PyPi Package](https://img.shields.io/pypi/v/beni)](https://pypi.org/project/beni/)
+[img:black]: https://img.shields.io/badge/code%20style-black-000000.svg
+[lnk:black]: https://github.com/psf/black
+[img:ci]: https://github.com/Quansight-Labs/beni/actions/workflows/pythonpackage.yml/badge.svg
+[lnk:ci]: https://github.com/Quansight-Labs/beni/actions/workflows/pythonpackage.yml
+[img:pypi]: https://img.shields.io/pypi/v/beni
+[lnk:pypi]: https://pypi.org/project/beni/
 
 
 > *Common names: Bolivian anaconda, **Beni** anaconda*
@@ -11,14 +16,18 @@
 >
 > The four-metre long Eunectes beniensis was initially believed to be the result of hybridization between green and yellow anacondas, but was later determined to be a distinct species. The taxonomic status is not clear, due to lack of information and the appearance similarity to Eunectes notaeus. It is closely related to Eunectes notaeus and Eunectes deschauenseei.
 
-*`beni` is [`flit`](https://github.com/takluyver/flit) + [`conda`](https://docs.conda.io/en/latest/)*
+*`beni` is [`PEP 621`]()/[`flit`]() + [`conda`]()*
+
+[`PEP 621`]: https://www.python.org/dev/peps/pep-0621/
+[`flit`]: https://github.com/takluyver/flit
+[`conda`]: https://docs.conda.io/en/latest/
 
 ## What?
 
 This is a specific tool to fascilitate one workflow of using flit and conda together. The assumptions are:
 
-1. You have a repository with at least one Python package
-2. You use `flit` and `pyproject.toml` to describe your dependencies
+1. You have a repository with at least one Python package.
+2. You use [`PEP 621`]() and/or [`flit`]() and `pyproject.toml` to describe your dependencies.
 3. You want to use Conda to manage local development but you wanna release your package on PyPi.
 4. You want to generate an `environment.yml` for local development that will install as many of your Pypi dependencies through Conda as possible.
 
@@ -39,7 +48,7 @@ Without this tool you have to manually keep your `environment.yml` up to date wi
 
 ## Example
 
-```bash
+```console
 $ beni -h
 usage: beni [-h] [--deps {all,production,develop,extras}] [--extras extra1,...]
             [--ignore [foo [bar ...]]]
@@ -53,9 +62,9 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --deps {all,production,develop,extras}
-                        Which dependencies to emit. 'develop' means the extras 'test', 'doc', and 'dev',
-                        'all' means all extras, and 'extras' means the ones specified in `--extras` or all
-                        extras if `--extras` is not specified.
+                        Which dependencies to emit. 'production' means no extras,
+                        'develop' means the extras 'test', 'doc', and 'dev', 'all' means all extras,
+                        and 'extras' means the ones specified in `--extras` or all extras if `--extras` is not given.
   --extras extra1,...   Install the dependencies of these (comma separated) extras additionally to the ones
                         implied by --deps. --extras=all can be useful in combination with --deps=production.
   --ignore [foo [bar ...]]
@@ -126,5 +135,6 @@ dependencies:
 ```bash
 conda env create -f environment.yml
 conda activate beni
+pre-commit install
 flit install --symlink
 ```

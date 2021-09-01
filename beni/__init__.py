@@ -22,11 +22,14 @@ import tqdm
 import typeguard
 import yaml
 from packaging.requirements import Requirement
+
 try:
     import flit_core.config as flit_config
+
     flit2 = False
 except ImportError:
     import flit_core.inifile as flit_config
+
     flit2 = True
 
 
@@ -65,7 +68,7 @@ class CFMapping(typing.TypedDict):
 
 parser = argparse.ArgumentParser(__name__, description="Generate an environment.yml.")
 parser.add_argument(
-    "paths", metavar="pyproject.toml", type=Path, nargs="+", help="flit config files",
+    "paths", metavar="pyproject.toml", type=Path, nargs="+", help="flit config files"
 )
 parser.add_argument(
     "--format",
@@ -90,7 +93,7 @@ extras_action = parser.add_argument(
     "--extras",
     metavar="extra1,...",
     default=(),
-    type=lambda l: l.split(',') if l else (),
+    type=lambda l: l.split(",") if l else (),
     help=(
         "Install the dependencies of these (comma separated) extras additionally to the ones implied by --deps. "
         "--extras=all can be useful in combination with --deps=production."
@@ -183,16 +186,20 @@ def generate_environment(
     }
 
 
-def extras_to_install(c: flit_config.LoadedConfig, deps: Deps, extras: typing.Sequence[str]) -> typing.Set[str]:
+def extras_to_install(
+    c: flit_config.LoadedConfig, deps: Deps, extras: typing.Sequence[str]
+) -> typing.Set[str]:
     to_install = set(extras)
-    if any((
-        deps is Deps.all,
-        deps is Deps.extras and not to_install,
-        'all' in to_install,
-    )):
+    if any(
+        (
+            deps is Deps.all,
+            deps is Deps.extras and not to_install,
+            "all" in to_install,
+        )
+    ):
         to_install |= set(c.reqs_by_extra.keys())
     elif deps is Deps.develop:
-        to_install |= {'dev', 'doc', 'test'}
+        to_install |= {"dev", "doc", "test"}
     return to_install
 
 
@@ -211,7 +218,11 @@ def clear_extras(reqs: typing.Iterable[Requirement]):
         if r.marker is None:
             continue
         markers = getattr(r.marker, "_markers", [])
-        if len(markers) < 3 or not isinstance(markers[0], tuple) or not hasattr(markers[0][0], "value"):
+        if (
+            len(markers) < 3
+            or not isinstance(markers[0], tuple)
+            or not hasattr(markers[0][0], "value")
+        ):
             # Either empty or they changed the code
             r.marker = None
         elif len(markers) == 1 and markers[0][0].value == "extra":
@@ -252,7 +263,7 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
         env = generate_environment(first_module, python_version, reqs_final)
         spec = yaml.dump(env)
     elif args.format is Format.pip:
-        spec = '\n'.join(map(str, clear_extras(reqs_final)))
+        spec = "\n".join(map(str, clear_extras(reqs_final)))
     else:
         assert False
     print(spec)
