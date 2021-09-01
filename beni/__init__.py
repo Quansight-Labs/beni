@@ -107,17 +107,16 @@ parser.add_argument(
 
 def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
     parts = urlparse(url)
-    file_name = PurePosixPath(parts.path).name
     cache_path = CACHE_DIR / parts.netloc / parts.path.lstrip("/")
     if cache_path.is_file():
         last_modified = datetime.fromtimestamp(cache_path.stat().st_mtime, timezone.utc)
         now = datetime.now(timezone.utc)
         if (now - last_modified) < max_age:
             return cache_path
-        msg = f"Re-creating old cache for {file_name}"
+        msg = f"Re-creating old cache for {cache_path.name}"
     else:
         cache_path.parent.mkdir(exist_ok=True, parents=True)
-        msg = f"Creating cache for {file_name} at {CACHE_DIR}"
+        msg = f"Creating cache for {cache_path.name} at {CACHE_DIR}"
 
     req = urllib.request.Request(url, headers={"User-Agent": "beni"})
     with urllib.request.urlopen(req) as resp, \
