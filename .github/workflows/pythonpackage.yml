@@ -20,4 +20,4 @@ jobs:
         pytest -v --color=yes
     - name: Run static checks
       run: |
-        pre-commit run --all-files --show-diff-on-failure
+        PRE_COMMIT_COLOR=always pre-commit run --all-files --show-diff-on-failure
