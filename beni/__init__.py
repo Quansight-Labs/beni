@@ -10,6 +10,7 @@ import argparse
 import http.client
 import json
 import typing
+import urllib.request
 from contextlib import closing
 from copy import deepcopy
 from datetime import timedelta, datetime, timezone
@@ -107,17 +108,8 @@ parser.add_argument(
 
 
 def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
-    method = 'GET'
     parts = urlparse(url)
-    assert parts.scheme in {"https", "http"}
-    assert not parts.query
-    # Have to use http.client instead of urllib b/c no way to disable redirects
-    # on urrlib and it's wasteful to follow (AFAIK)
-    con_cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
-    conn = con_cls(parts.hostname, parts.port)
-    conn.request(method, parts.path, headers={"User-Agent": "beni"})
-    r = conn.getresponse()
-    cache_path = CACHE_DIR / parts.netloc / parts.path.lstrip('/')
+    cache_path = CACHE_DIR / parts.netloc / parts.path.lstrip("/")
     if cache_path.is_file():
         last_modified = datetime.fromtimestamp(cache_path.stat().st_mtime, timezone.utc)
         now = datetime.now(timezone.utc)
@@ -125,11 +117,13 @@ def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
             return cache_path
     else:
         cache_path.parent.mkdir(exist_ok=True, parents=True)
-    with closing(r), cache_path.open('wb') as f:
-        if r.status != 200:
-            content = r.read().decode("utf-8", errors="surrogateescape")
-            raise http.client.HTTPException(f"Error {method}ing {url}, received {r.reason}: {content}")
-        copyfileobj(r, f)
+
+    req = urllib.request.Request(url, headers={"User-Agent": "beni"})
+    with urllib.request.urlopen(req) as resp, cache_path.open("wb") as f:
+        if resp.status != 200:
+            content = resp.read().decode("utf-8", errors="surrogateescape")
+            raise http.client.HTTPException(f"Error GETting {url}, received {resp.reason}: {content}")
+        copyfileobj(resp, f)
     return cache_path
 
 
@@ -145,7 +139,7 @@ class CondaForgeMapper:
 
     def __init__(self):
         self.data = typing.cast(typing.List[CFMapping], yaml.safe_load(get_cached(CF_MAPPING_URL).read_bytes()))
-        self.cf_pkgs = {self._normalize(n['id']) for n in json.loads(get_cached(CF_GRAPH_URL).read_bytes())['nodes']}
+        self.cf_pkgs = {self._normalize(n["id"]) for n in json.loads(get_cached(CF_GRAPH_URL).read_bytes())["nodes"]}
         self._pypi2cf = {self._normalize(m["pypi_name"]): m["conda_name"] for m in self.data}
 
     @staticmethod
