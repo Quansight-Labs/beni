@@ -120,7 +120,7 @@ def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
 
     req = urllib.request.Request(url, headers={"User-Agent": "beni"})
     with urllib.request.urlopen(req) as resp, \
-            tqdm.tqdm.wrapattr(cache_path.open("wb"), "write", desc=msg, total=getattr(resp, 'length', None)) as f:
+            tqdm.tqdm.wrapattr(cache_path.open("wb"), "write", desc=msg, total=getattr(resp, "length", None)) as f:
         copyfileobj(resp, f)
     return cache_path
 
