@@ -21,3 +21,6 @@ jobs:
     - name: Test using pytest
       run: |
         pytest -v --color=yes
+    - name: Run static checks
+      run: |
+        pre-commit run --all-files --show-diff-on-failure
