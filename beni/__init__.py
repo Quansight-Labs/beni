@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import http.client
+import json
 import typing
 from contextlib import closing
 from copy import deepcopy
@@ -34,9 +35,8 @@ __version__ = "0.4.2"
 
 CACHE_DIR = Path(platformdirs.user_cache_dir('beni'))
 BASE_URL = "https://raw.githubusercontent.com/regro"
-CF_GRAPH_URL = f"{BASE_URL}/cf-graph-countyfair/blob/master/graph.json"
+CF_GRAPH_URL = f"{BASE_URL}/cf-graph-countyfair/master/graph.json"
 CF_MAPPING_URL = f"{BASE_URL}/cf-graph-countyfair/master/mappings/pypi/name_mapping.yaml"
-CF_MAP_STATIC_URL = f"{BASE_URL}/cf-scripts/master/conda_forge_tick/pypi_name_mapping_static.yaml"
 
 
 class Format(Enum):
@@ -135,18 +135,28 @@ def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
 
 class CondaForgeMapper:
     data: typing.List[CFMapping]
+    """All non-trivial mappings between PyPI and Conda Forge packages"""
+
+    cf_pkgs: typing.Set[str]
+    """All Conda Forge package names"""
+
     _pypi2cf: typing.Dict[str, str]
+    """A dict from normalized PyPI name to conda forge name"""
 
     def __init__(self):
         self.data = typing.cast(typing.List[CFMapping], yaml.safe_load(get_cached(CF_MAPPING_URL).read_bytes()))
+        self.cf_pkgs = {self._normalize(n['id']) for n in json.loads(get_cached(CF_GRAPH_URL).read_bytes())['nodes']}
         self._pypi2cf = {self._normalize(m["pypi_name"]): m["conda_name"] for m in self.data}
 
     @staticmethod
     def _normalize(name: str) -> str:
+        """Normalize a PyPI or Conda Forge package name into lower-case-with-dashes"""
         return name.casefold().replace("_", "-")
 
     def pypi2cf(self, pypi_name: str) -> typing.Optional[str]:
-        return self._pypi2cf.get(self._normalize(pypi_name))
+        """Get the name a PyPI package has in Conda Forge. None if it can’t be found."""
+        norm_name = self._normalize(pypi_name)
+        return self._pypi2cf.get(norm_name) or (norm_name if norm_name in self.cf_pkgs else None)
 
 
 class Environment(typing.TypedDict):

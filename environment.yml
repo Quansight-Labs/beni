@@ -11,7 +11,7 @@ dependencies:
 - packaging
 - python>=3.8
 - mypy
-- types-PyYAML
+- types-pyyaml
 - black
 - pytest
 - typeguard

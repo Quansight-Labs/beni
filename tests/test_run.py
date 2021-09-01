@@ -11,7 +11,7 @@ proj_dir = Path(__file__).parent.parent
 pyproj_path = proj_dir / "pyproject.toml"
 environment = yaml.safe_load((proj_dir / "environment.yml").read_text())
 
-dev_deps = ["black", "ipython", "mypy", "types-PyYAML"]
+dev_deps = ["black", "ipython", "mypy", "types-pyyaml"]
 test_deps = ["pytest"]
 
 
@@ -31,6 +31,7 @@ def test_run_basic(capsys: CaptureFixture):
 def test_run_prod_deps(capsys: CaptureFixture):
     expected = deepcopy(environment)
     for dep in dev_deps + test_deps:
+        assert dep in expected['dependencies']
         expected['dependencies'].remove(dep)
     main([str(pyproj_path), '--deps=production'])
     actual = yaml.safe_load(capsys.readouterr().out)
