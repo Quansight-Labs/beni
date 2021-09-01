@@ -7,11 +7,9 @@ Generate environment.yml from pyproject.toml
 from __future__ import annotations
 
 import argparse
-import http.client
 import json
 import typing
 import urllib.request
-from contextlib import closing
 from copy import deepcopy
 from datetime import timedelta, datetime, timezone
 from enum import Enum, auto
@@ -120,9 +118,6 @@ def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
 
     req = urllib.request.Request(url, headers={"User-Agent": "beni"})
     with urllib.request.urlopen(req) as resp, cache_path.open("wb") as f:
-        if resp.status != 200:
-            content = resp.read().decode("utf-8", errors="surrogateescape")
-            raise http.client.HTTPException(f"Error GETting {url}, received {resp.reason}: {content}")
         copyfileobj(resp, f)
     return cache_path
 
