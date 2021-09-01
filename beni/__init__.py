@@ -11,9 +11,9 @@ import json
 import typing
 import urllib.request
 from copy import deepcopy
-from datetime import timedelta, datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from shutil import copyfileobj
 from urllib.parse import urlparse
 
@@ -35,10 +35,12 @@ except ImportError:
 
 __version__ = "0.4.2"
 
-CACHE_DIR = Path(platformdirs.user_cache_dir('beni'))
+CACHE_DIR = Path(platformdirs.user_cache_dir("beni"))
 BASE_URL = "https://raw.githubusercontent.com/regro"
 CF_GRAPH_URL = f"{BASE_URL}/cf-graph-countyfair/master/graph.json"
-CF_MAPPING_URL = f"{BASE_URL}/cf-graph-countyfair/master/mappings/pypi/name_mapping.yaml"
+CF_MAPPING_URL = (
+    f"{BASE_URL}/cf-graph-countyfair/master/mappings/pypi/name_mapping.yaml"
+)
 
 
 class Format(Enum):
@@ -122,8 +124,9 @@ def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
         msg = f"Creating cache for {cache_path.name} at {CACHE_DIR}"
 
     req = urllib.request.Request(url, headers={"User-Agent": "beni"})
-    with urllib.request.urlopen(req) as resp, \
-            tqdm.tqdm.wrapattr(cache_path.open("wb"), "write", desc=msg, total=getattr(resp, "length", None)) as f:
+    with urllib.request.urlopen(req) as resp, tqdm.tqdm.wrapattr(
+        cache_path.open("wb"), "write", desc=msg, total=getattr(resp, "length", None)
+    ) as f:
         copyfileobj(resp, f)
     return cache_path
 
@@ -139,9 +142,17 @@ class CondaForgeMapper:
     """A dict from normalized PyPI name to conda forge name"""
 
     def __init__(self):
-        self.data = typing.cast(typing.List[CFMapping], yaml.safe_load(get_cached(CF_MAPPING_URL).read_bytes()))
-        self.cf_pkgs = {self._normalize(n["id"]) for n in json.loads(get_cached(CF_GRAPH_URL).read_bytes())["nodes"]}
-        self._pypi2cf = {self._normalize(m["pypi_name"]): m["conda_name"] for m in self.data}
+        self.data = typing.cast(
+            typing.List[CFMapping],
+            yaml.safe_load(get_cached(CF_MAPPING_URL).read_bytes()),
+        )
+        self.cf_pkgs = {
+            self._normalize(n["id"])
+            for n in json.loads(get_cached(CF_GRAPH_URL).read_bytes())["nodes"]
+        }
+        self._pypi2cf = {
+            self._normalize(m["pypi_name"]): m["conda_name"] for m in self.data
+        }
 
     @staticmethod
     def _normalize(name: str) -> str:
@@ -151,7 +162,9 @@ class CondaForgeMapper:
     def pypi2cf(self, pypi_name: str) -> typing.Optional[str]:
         """Get the name a PyPI package has in Conda Forge. None if it can’t be found."""
         norm_name = self._normalize(pypi_name)
-        return self._pypi2cf.get(norm_name) or (norm_name if norm_name in self.cf_pkgs else None)
+        return self._pypi2cf.get(norm_name) or (
+            norm_name if norm_name in self.cf_pkgs else None
+        )
 
 
 class Environment(typing.TypedDict):
