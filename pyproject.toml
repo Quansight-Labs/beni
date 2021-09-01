@@ -26,5 +26,10 @@ dev = [
 test = [
     "pytest",
 ]
+
 [tool.flit.scripts]
 beni = "beni:main"
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
