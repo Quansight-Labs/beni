@@ -15,9 +15,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip flit
         flit install --symlink
-    - name: Lint with mypy
-      run: |
-        mypy beni
     - name: Test using pytest
       run: |
         pytest -v --color=yes
+    - name: Run static checks
+      run: |
+        PRE_COMMIT_COLOR=always pre-commit run --all-files --show-diff-on-failure
