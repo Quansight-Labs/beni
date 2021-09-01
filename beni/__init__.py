@@ -168,7 +168,7 @@ def generate_environment(
         dependencies.add("python")
 
     mapper = CondaForgeMapper()
-    for r in tqdm.tqdm(requirements, desc="Checking packages"):
+    for r in requirements:
         if (cf_name := mapper.pypi2cf(r.name)) is None:
             continue
         dependencies.add(f"{cf_name}{r.specifier}")
