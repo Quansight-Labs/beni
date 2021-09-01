@@ -13,7 +13,7 @@ import urllib.request
 from copy import deepcopy
 from datetime import timedelta, datetime, timezone
 from enum import Enum, auto
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from shutil import copyfileobj
 from urllib.parse import urlparse
 
@@ -107,17 +107,21 @@ parser.add_argument(
 
 def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
     parts = urlparse(url)
+    file_name = PurePosixPath(parts.path).name
     cache_path = CACHE_DIR / parts.netloc / parts.path.lstrip("/")
     if cache_path.is_file():
         last_modified = datetime.fromtimestamp(cache_path.stat().st_mtime, timezone.utc)
         now = datetime.now(timezone.utc)
         if (now - last_modified) < max_age:
             return cache_path
+        msg = f"Re-creating old cache for {file_name}"
     else:
         cache_path.parent.mkdir(exist_ok=True, parents=True)
+        msg = f"Creating cache for {file_name} at {CACHE_DIR}"
 
     req = urllib.request.Request(url, headers={"User-Agent": "beni"})
-    with urllib.request.urlopen(req) as resp, cache_path.open("wb") as f:
+    with urllib.request.urlopen(req) as resp, \
+            tqdm.tqdm.wrapattr(cache_path.open("wb"), "write", desc=msg, total=getattr(resp, 'length', None)) as f:
         copyfileobj(resp, f)
     return cache_path
 
@@ -229,7 +233,7 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     requires: typing.List[Requirement] = []
     first_module: typing.Optional[str] = None
     ignored_modules: typing.List[str] = args.ignore or []
-    for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
+    for path in args.paths:
         c = flit_config.read_flit_config(str(path) if flit2 else path)
         if not first_module:
             first_module = c.module
