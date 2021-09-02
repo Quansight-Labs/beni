@@ -3,15 +3,15 @@ channels:
 dependencies:
 - pip:
   - flit
-- pyyaml
+- python>=3.8
 - pip
-- ipython
+- pyyaml
+- typeguard
+- packaging
+- tqdm
 - flit-core<4,>=2
 - platformdirs
-- packaging
-- python>=3.8
 - pre-commit
+- ipython
 - pytest
-- typeguard
-- tqdm
 name: beni
