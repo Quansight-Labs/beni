@@ -14,16 +14,10 @@ dev_deps = ["pre-commit", "ipython"]
 test_deps = ["pytest"]
 
 
-def sort_environments(*envs):
-    for d in envs:
-        d["dependencies"] = [d["dependencies"][0], *sorted(d["dependencies"][1:])]
-
-
 def test_run_basic(capsys: CaptureFixture):
     expected = deepcopy(environment)
     main([str(pyproj_path)])
     actual = yaml.safe_load(capsys.readouterr().out)
-    sort_environments(expected, actual)
     assert expected == actual
 
 
@@ -34,7 +28,6 @@ def test_run_prod_deps(capsys: CaptureFixture):
         expected["dependencies"].remove(dep)
     main([str(pyproj_path), "--deps=production"])
     actual = yaml.safe_load(capsys.readouterr().out)
-    sort_environments(expected, actual)
     assert expected == actual
 
 
@@ -44,5 +37,4 @@ def test_run_dev_extra(capsys: CaptureFixture):
         expected["dependencies"].remove(dep)
     main([str(pyproj_path), "--extras=dev"])
     actual = yaml.safe_load(capsys.readouterr().out)
-    sort_environments(expected, actual)
     assert expected == actual
