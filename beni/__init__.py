@@ -179,23 +179,21 @@ def generate_environment(
     python_version: typing.Optional[str],
     requirements: typing.List[Requirement],
 ) -> Environment:
-    dependencies = {"pip"}
-
-    if python_version:
-        dependencies.add(f"python{python_version}")
-    else:
-        dependencies.add("python")
+    # Using dicts to preserve order
+    deps_conda = dict.fromkeys([f"python{python_version or ''}", "pip"])
+    deps_pip = dict.fromkeys(["flit"])
 
     mapper = CondaForgeMapper()
     for r in requirements:
-        if (cf_name := mapper.pypi2cf(r.name)) is None:
-            continue
-        dependencies.add(f"{cf_name}{r.specifier}")
+        if cf_name := mapper.pypi2cf(r.name):
+            deps_conda[f"{cf_name}{r.specifier}"] = None
+        else:
+            deps_pip[f"{r.name}{r.specifier}"] = None
 
     return {
         "name": name,
         "channels": ["conda-forge"],
-        "dependencies": [{"pip": ["flit"]}, *dependencies],
+        "dependencies": [{"pip": list(deps_pip.keys())}, *deps_conda.keys()],
     }
 
 
