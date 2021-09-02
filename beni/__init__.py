@@ -7,12 +7,17 @@ Generate environment.yml from pyproject.toml
 from __future__ import annotations
 
 import argparse
-import http.client
+import json
 import typing
+import urllib.request
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
 from pathlib import Path
+from shutil import copyfileobj
+from urllib.parse import urlparse
 
+import platformdirs
 import tqdm
 import typeguard
 import yaml
@@ -29,6 +34,13 @@ except ImportError:
 
 
 __version__ = "0.4.2"
+
+CACHE_DIR = Path(platformdirs.user_cache_dir("beni"))
+BASE_URL = "https://raw.githubusercontent.com/regro"
+CF_GRAPH_URL = f"{BASE_URL}/cf-graph-countyfair/master/graph.json"
+CF_MAPPING_URL = (
+    f"{BASE_URL}/cf-graph-countyfair/master/mappings/pypi/name_mapping.yaml"
+)
 
 
 class Format(Enum):
@@ -47,6 +59,13 @@ class Deps(Enum):
 
     def __str__(self):
         return self.name
+
+
+class CFMapping(typing.TypedDict):
+    conda_name: str
+    import_name: str
+    mapping_source: str
+    pypi_name: str
 
 
 parser = argparse.ArgumentParser(__name__, description="Generate an environment.yml.")
@@ -91,21 +110,61 @@ parser.add_argument(
 )
 
 
-def is_conda_forge_package(name: str) -> bool:
-    """
-    Checks if something is a conda forge package by hitting conda page.
+def get_cached(url: str, max_age: timedelta = timedelta(hours=1)) -> Path:
+    parts = urlparse(url)
+    cache_path = CACHE_DIR / parts.netloc / parts.path.lstrip("/")
+    if cache_path.is_file():
+        last_modified = datetime.fromtimestamp(cache_path.stat().st_mtime, timezone.utc)
+        now = datetime.now(timezone.utc)
+        if (now - last_modified) < max_age:
+            return cache_path
+        msg = f"Re-creating old cache for {cache_path.name}"
+    else:
+        cache_path.parent.mkdir(exist_ok=True, parents=True)
+        msg = f"Creating cache for {cache_path.name} at {CACHE_DIR}"
 
-    If 200 then package, if 302 then not.
-    """
-    # Have to use http.client instead of urllib b/c no way to disable redirects
-    # on urrlib and it's wasteful to follow (AFAIK)
+    req = urllib.request.Request(url, headers={"User-Agent": "beni"})
+    with urllib.request.urlopen(req) as resp, tqdm.tqdm.wrapattr(
+        cache_path.open("wb"), "write", desc=msg, total=getattr(resp, "length", None)
+    ) as f:
+        copyfileobj(resp, f)
+    return cache_path
 
-    # Need user agent or else got unauthorized
-    conn = http.client.HTTPSConnection("anaconda.org")
-    conn.request("GET", f"/conda-forge/{name}/", headers={"User-Agent": "beni"})
-    r = conn.getresponse()
-    conn.close()
-    return r.status == 200
+
+class CondaForgeMapper:
+    data: typing.List[CFMapping]
+    """All non-trivial mappings between PyPI and Conda Forge packages"""
+
+    cf_pkgs: typing.Set[str]
+    """All Conda Forge package names"""
+
+    _pypi2cf: typing.Dict[str, str]
+    """A dict from normalized PyPI name to conda forge name"""
+
+    def __init__(self):
+        self.data = typing.cast(
+            typing.List[CFMapping],
+            yaml.safe_load(get_cached(CF_MAPPING_URL).read_bytes()),
+        )
+        self.cf_pkgs = {
+            self._normalize(n["id"])
+            for n in json.loads(get_cached(CF_GRAPH_URL).read_bytes())["nodes"]
+        }
+        self._pypi2cf = {
+            self._normalize(m["pypi_name"]): m["conda_name"] for m in self.data
+        }
+
+    @staticmethod
+    def _normalize(name: str) -> str:
+        """Normalize a PyPI or Conda Forge package name into lower-case-with-dashes"""
+        return name.casefold().replace("_", "-")
+
+    def pypi2cf(self, pypi_name: str) -> typing.Optional[str]:
+        """Get the name a PyPI package has in Conda Forge. None if it can’t be found."""
+        norm_name = self._normalize(pypi_name)
+        return self._pypi2cf.get(norm_name) or (
+            norm_name if norm_name in self.cf_pkgs else None
+        )
 
 
 class Environment(typing.TypedDict):
@@ -127,10 +186,11 @@ def generate_environment(
     else:
         dependencies.add("python")
 
-    for r in tqdm.tqdm(requirements, desc="Checking packages"):
-        if not is_conda_forge_package(r.name):
+    mapper = CondaForgeMapper()
+    for r in requirements:
+        if (cf_name := mapper.pypi2cf(r.name)) is None:
             continue
-        dependencies.add(f"{r.name}{r.specifier}")
+        dependencies.add(f"{cf_name}{r.specifier}")
 
     return {
         "name": name,
@@ -196,7 +256,7 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> None:
     requires: typing.List[Requirement] = []
     first_module: typing.Optional[str] = None
     ignored_modules: typing.List[str] = args.ignore or []
-    for path in tqdm.tqdm(args.paths, desc="Parsing configs"):
+    for path in args.paths:
         c = flit_config.read_flit_config(str(path) if flit2 else path)
         if not first_module:
             first_module = c.module
