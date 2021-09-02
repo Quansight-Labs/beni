@@ -33,7 +33,7 @@ except ImportError:
     flit2 = True
 
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 CACHE_DIR = Path(platformdirs.user_cache_dir("beni"))
 BASE_URL = "https://raw.githubusercontent.com/regro"
